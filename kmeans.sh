@@ -20,13 +20,11 @@ function square_dist {
 	echo $r;
 }
 
+# Returns the index with the minimum value in an array
 function find_nearest {
-	ret=$(echo "$1 <= $2" | bc -l);
-	if [ $ret -eq 1 ]; then
-		echo 1;
-	else
-		echo 2;
-	fi;
+	declare -a dist=("${!1}");
+	I=$(tr ' ' '\n' <<<${dist[@]} | cat -n | sort -k2,2n | head -n1 | cut -f1);
+	echo $I
 }
 
 function usage {
@@ -48,9 +46,9 @@ K=$2
 declare -a mu
 
 # Randomly initialize the means
-for i in $(seq 1 $2); do
+for i in $(seq 1 $K); do
 	mu[$i]="$((RANDOM%30)) $((RANDOM%30))"
-	echo Mean $i: ${mu[$i]}
+	echo Initial Mean $i: ${mu[$i]}
 done
 
 # Read in the data
@@ -67,36 +65,42 @@ for l in $(seq 1 10); do
 
 # Associate each data point with its closest mean
 for n in $(seq 0 $N); do
-	distance1[$n]=$(square_dist ${data1[$n]} ${data2[$n]} "${mu[1]}")
-	distance2[$n]=$(square_dist ${data1[$n]} ${data2[$n]} "${mu[2]}")
-	nearest[$n]=$(find_nearest "${distance1[$n]}" "${distance2[$n]}")
+	for k in $(seq 1 $K); do
+		distance[$k]=$(square_dist ${data1[$n]} ${data2[$n]} "${mu[$k]}")
+	done
+	nearest[$n]=$(find_nearest distance[@])
 done
 
 # Recalculate the means
-num1=0; num2=0;
-mx1=0;my1=0;mx2=0;my2=0;
-for j in $(seq 0 $N); do
-	ind=${nearest[$j]}
-	if [ $ind -eq 1 ]; then
-		let mx1+=${data1[$j]}
-		let my1+=${data2[$j]}
-		let num1+=1
+for k in $(seq 1 $K); do
+
+	num=0;
+	mx=0;
+	my=0;
+	for j in $(seq 0 $N); do
+		ind=${nearest[$j]}
+		if [ $ind -eq $k ]; then
+			let mx+=${data1[$j]}
+			let my+=${data2[$j]}
+			let num+=1
+		fi		
+	done
+	# if no data points are associated with the cluster
+	# set it to 0,0
+	if [[ $num == 0 ]]; then
+		echo "No data is in cluster $k (${mu[$k]})" 1>&2;
+		mx=0; my=0;
 	else
-		let mx2+=${data1[$j]}
-		let my2+=${data2[$j]}
-		let num2+=1
-	fi		
-done
-let mx1/=$num1; let my1/=$num1
-let mx2/=$num2; let my2/=$num2
+		let mx/=$num; let my/=$num;
+	fi
+	mu[$k]="$mx $my";
 
-mu[1]="$mx1 $my1";
-mu[2]="$mx2 $my2";
-
-#echo "mu[1]: ${mu[1]}"
-#echo "mu[2]: ${mu[2]}"
-
+	# Echo the cluster mean values at this iteration
+	#echo "$k: ${mu[$k]}";
 done
 
-echo ${mu[1]}
-echo ${mu[2]}
+done # end learning loop
+
+for k in $(seq 1 $K); do
+	echo ${mu[$k]}
+done;
