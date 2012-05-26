@@ -4,10 +4,6 @@
 # May 2012
 # Current assumption on 2D data
 
-#function read_file {
-#	
-#}
-
 function square_dist {
 	data1="$1";
 	data2="$2";
@@ -94,9 +90,6 @@ for k in $(seq 1 $K); do
 		let mx/=$num; let my/=$num;
 	fi
 	mu[$k]="$mx $my";
-
-	# Echo the cluster mean values at this iteration
-	#echo "$k: ${mu[$k]}";
 done
 
 done # end learning loop
